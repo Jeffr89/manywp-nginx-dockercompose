@@ -1,0 +1,95 @@
+x-services-volume:
+  &phpini-volume
+  type: bind
+  source: ./wp-config/uploads.ini
+  target: /usr/local/etc/php/conf.d/uploads.ini
+
+services:
+#NGINX Container
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-config/my_proxy.conf:/etc/nginx/conf.d/my_proxy.conf
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - dhparam:/etc/nginx/dhparam
+    networks:
+      - net
+#ACME-COMPANION Container
+  nginx-proxy-acme:
+    depends_on:
+      - "nginx-proxy"
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - acme:/etc/acme.sh
+    environment:
+      - DEFAULT_EMAIL=${DEFAULT_EMAIL}
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    networks:
+      - net
+
+#WP_00 Containers
+  db_wp_00:
+    image: mariadb:latest
+    volumes:
+      - db_wp_00_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_WP_00_PASSWORD}
+      MYSQL_DATABASE: ${DB_WP_00_DATABASE}
+      MYSQL_USER: ${DB_WP_00_USER}
+      MYSQL_PASSWORD: ${DB_WP_00_PASSWORD}
+    container_name: db_wp_00
+    networks:
+      - wp_00
+
+  wp_site_00:
+    depends_on:
+      - db_wp_00
+    image: wordpress:6.0-php8.0-apache
+    environment:
+      VIRTUAL_HOST: ${WP_SITE_00_VIRTUAL_HOST}
+      LETSENCRYPT_HOST:  ${WP_SITE_00_LETSENCRYPT_HOST}
+      WORDPRESS_DB_HOST:  ${WP_SITE_00_DB_HOST}
+      WORDPRESS_DB_USER:  ${DB_WP_00_USER}
+      WORDPRESS_DB_PASSWORD:  ${DB_WP_00_PASSWORD}
+      WORDPRESS_DB_NAME:  ${DB_WP_00_DATABASE}
+      WORDPRESS_TABLE_PREFIX: ${WP_SITE_00_TABLE_PREFIX}
+    volumes:
+      - wp_site_00_data:/var/www/html
+      - *phpini-volume
+    networks:
+      - wp_00
+      - net
+    restart: always
+    container_name: wp_site_00
+
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:
+  db_wp_00_data:
+  wp_site_00_data:
+  dhparam:
+
+
+networks:
+  wp_00:
+    internal: true
+  net:
+    driver: bridge
