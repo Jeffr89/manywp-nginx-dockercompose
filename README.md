@@ -30,4 +30,4 @@ E.g. add this line `127.0.0.1 wordpressone.com` to /etc/hosts and restart the br
 ## Take care!
 The docker volumes in this configuration will persist.
 
-Run the command `docker compose down` with the `--volumes`option only in case you need to clean the data storage.
+Run the command `docker compose down` with the `--volumes` option only in case you need to clean the data storage.
