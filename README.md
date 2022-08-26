@@ -4,6 +4,7 @@ Deploy a multiple Wordpress instance architecture that handles HTTPS support e m
 Both Docker and Docker Compose must be installed on the host machine.
 
 Install Docker Engine: https://docs.docker.com/engine/install/
+
 Install Docker Compose: https://docs.docker.com/compose/install/
 
 ## Wordpress PHP Setup
